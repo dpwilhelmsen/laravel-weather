@@ -158,6 +158,22 @@ class WeatherKit extends Provider
         return new Response($data);
     }
 
+    protected function convertMoonPhase(string $moonPhase): ?float
+    {
+        $map = [
+            'new' => 0.0,
+            'waxingCrescent' => 0.125,
+            'firstQuarter' => 0.25,
+            'waxingGibbous' => 0.375,
+            'full' => 0.5,
+            'waningGibbous' => 0.625,
+            'thirdQuarter' => 0.75,
+            'waningCrescent' => 0.875,
+        ];
+
+        return $map[$moonPhase] ?? null;
+    }
+
     protected function convertIcon(string $conditionCode): string
     {
         $map = [
@@ -236,6 +252,9 @@ class WeatherKit extends Provider
                 'time' => Carbon::parse($weatherData->asOf),
                 'summary' => $weatherData->conditionCode,
                 'icon' => $this->convertIcon($weatherData->conditionCode),
+                'sunriseTime' => Carbon::parse($weatherData->sunrise),
+                'sunsetTime' => Carbon::parse($weatherData->sunset),
+                'moonPhase' => $this->convertMoonPhase($weatherData->moonPhase),
                 'precipIntensity' => $weatherData->precipitationIntensity,
                 'precipProbability' => 0,
                 'temperature' => $request->getUnits() === 'si' ? $weatherData->temperature : $this->celsiusToFahrenheit($weatherData->temperature),
@@ -269,6 +288,9 @@ class WeatherKit extends Provider
                 'time' => Carbon::parse($weatherData->days[0]->forecastStart),
                 'summary' => $weatherData->days[0]->conditionCode,
                 'icon' => $this->convertIcon($weatherData->days[0]->conditionCode),
+                'sunriseTime' => Carbon::parse($weatherData->days[0]->sunrise),
+                'sunsetTime' => Carbon::parse($weatherData->days[0]->sunset),
+                'moonPhase' => $this->convertMoonPhase($weatherData->days[0]->moonPhase),
                 'precipIntensity' => $weatherData->days[0]->precipitationAmount,
                 'precipProbability' => $weatherData->days[0]->precipitationChance,
                 'temperature' => $request->getUnits() === 'si' ? $weatherData->days[0]->temperatureMax : $this->celsiusToFahrenheit($weatherData->days[0]->temperatureMax),
@@ -298,6 +320,17 @@ class WeatherKit extends Provider
                 'summary' => $day->conditionCode ?? null,
                 'temperatureMin' => $day->temperatureMin ?? null,
                 'temperatureMax' => $day->temperatureMax ?? null,
+                'sunriseTime' => Carbon::parse($day->sunrise),
+                'sunsetTime' => Carbon::parse($day->sunset),
+                'moonPhase' => $this->convertMoonPhase($day->moonPhase),
+                'precipIntensity' => $day->precipitationAmount,
+                'precipProbability' => $day->precipitationChance,
+                'temperature' => $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMax),
+                'humidity' => $day->daytimeForecast->humidity,
+                'windSpeed' => $request->getUnits() === 'si' ? $day->daytimeForecast->windSpeed : $this->kmToMiles($day->daytimeForecast->windSpeed),
+                'windBearing' => $day->daytimeForecast->windDirection,
+                'cloudCover' => $day->daytimeForecast->cloudCover,
+                'uvIndex' => $day->maxUvIndex,
             ];
         }
 
