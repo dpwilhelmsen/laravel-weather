@@ -98,7 +98,7 @@ class WeatherKit extends Provider
 
             if ($type === self::WEATHER_TYPE_FORECAST) {
                 $dateRequest = clone $request;
-                $url = $this->url . "$locale/$latitude/$longitude?dataSets=forecastDaily&timezone=" . $request->getTimezone() . '&currentAsOf=' . now()->setMinute(0)->setSecond(0)->toIso8601ZuluString();
+                $url = $this->url . "$locale/$latitude/$longitude?dataSets=currentWeather,forecastDaily&timezone=" . $request->getTimezone() . '&currentAsOf=' . now()->setMinute(0)->setSecond(0)->toIso8601ZuluString();
                 $dateRequest->setUrl($url);
                 $requests[] = $dateRequest;
             }
@@ -150,7 +150,7 @@ class WeatherKit extends Provider
         $data = [];
 
         if (isset($response->currentWeather)) {
-            $data = $this->getCurrentWeatherDataFromResponse($response->currentWeather, $request);
+            $data = $this->getCurrentWeatherDataFromResponse($response, $request);
         } elseif (isset($response->forecastDaily)) {
             $data = $this->getForecastWeatherDataFromResponse($response->forecastDaily, $request);
         }
@@ -242,9 +242,10 @@ class WeatherKit extends Provider
         return JWT::encode($payload, $privateKey, config('weather.providers.weatherkit.alg'), null, $header);
     }
 
-    protected function getCurrentWeatherDataFromResponse($weatherData, Request $request): array
+    protected function getCurrentWeatherDataFromResponse($response, Request $request): array
     {
-        return [
+        $weatherData = $response->currentWeather;
+        $data = [
             'latitude' => (float) $weatherData->metadata->latitude,
             'longitude' => (float) $weatherData->metadata->longitude,
             'timezone' => $request->getTimezone(),
@@ -252,9 +253,6 @@ class WeatherKit extends Provider
                 'time' => Carbon::parse($weatherData->asOf),
                 'summary' => $weatherData->conditionCode,
                 'icon' => $this->convertIcon($weatherData->conditionCode),
-                'sunriseTime' => Carbon::parse($weatherData->sunrise),
-                'sunsetTime' => Carbon::parse($weatherData->sunset),
-                'moonPhase' => $this->convertMoonPhase($weatherData->moonPhase),
                 'precipIntensity' => $weatherData->precipitationIntensity,
                 'precipProbability' => 0,
                 'temperature' => $request->getUnits() === 'si' ? $weatherData->temperature : $this->celsiusToFahrenheit($weatherData->temperature),
@@ -276,6 +274,38 @@ class WeatherKit extends Provider
                 'summary' => $weatherData->conditionCode,
             ],
         ];
+
+        if (isset($response->forecastDaily)) {
+            $dailyData = $response->forecastDaily;
+            $data['currently'] = array_merge($data['currently'], [
+                'sunriseTime' => Carbon::parse($dailyData->days[0]->sunrise),
+                'sunsetTime' => Carbon::parse($dailyData->days[0]->sunset),
+                'moonPhase' => $this->convertMoonPhase($dailyData->days[0]->moonPhase),
+            ]);
+
+            foreach ($dailyData->days as $day) {
+                $data['daily']['data'][] = [
+                    'time' => $day->forecastStart ?? null,
+                    'icon' => $this->convertIcon($day->conditionCode) ?? self::WEATHER_ICON_NA,
+                    'summary' => $day->conditionCode ?? null,
+                    'temperatureMin' => $day->temperatureMin ?? null,
+                    'temperatureMax' => $day->temperatureMax ?? null,
+                    'sunriseTime' => Carbon::parse($day->sunrise),
+                    'sunsetTime' => Carbon::parse($day->sunset),
+                    'moonPhase' => $this->convertMoonPhase($day->moonPhase),
+                    'precipIntensity' => $day->precipitationAmount,
+                    'precipProbability' => $day->precipitationChance,
+                    'temperature' => $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMax),
+                    'humidity' => $day->daytimeForecast->humidity,
+                    'windSpeed' => $request->getUnits() === 'si' ? $day->daytimeForecast->windSpeed : $this->kmToMiles($day->daytimeForecast->windSpeed),
+                    'windBearing' => $day->daytimeForecast->windDirection,
+                    'cloudCover' => $day->daytimeForecast->cloudCover,
+                    'uvIndex' => $day->maxUvIndex,
+                ];
+            }
+        }
+
+        return $data;
     }
 
     protected function getForecastWeatherDataFromResponse($weatherData, Request $request): array
