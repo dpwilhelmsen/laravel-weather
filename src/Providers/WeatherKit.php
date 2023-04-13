@@ -284,12 +284,22 @@ class WeatherKit extends Provider
             ]);
 
             foreach ($dailyData->days as $day) {
+                $tempMin = null;
+                $tempMax = null;
+
+                if ($day->temperatureMin) {
+                    $tempMin = $request->getUnits() === 'si' ? $day->temperatureMin : $this->celsiusToFahrenheit($day->temperatureMin);
+                }
+                if ($day->temperatureMax) {
+                    $tempMax = $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMax);
+                }
+
                 $data['daily']['data'][] = [
                     'time' => $day->forecastStart ?? null,
                     'icon' => $this->convertIcon($day->conditionCode) ?? self::WEATHER_ICON_NA,
                     'summary' => $day->conditionCode ?? null,
-                    'temperatureMin' => $day->temperatureMin ?? null,
-                    'temperatureMax' => $day->temperatureMax ?? null,
+                    'temperatureMin' => $tempMin,
+                    'temperatureMax' => $tempMax,
                     'sunriseTime' => Carbon::parse($day->sunrise),
                     'sunsetTime' => Carbon::parse($day->sunset),
                     'moonPhase' => $this->convertMoonPhase($day->moonPhase),
@@ -344,12 +354,22 @@ class WeatherKit extends Provider
         ];
 
         foreach ($weatherData->days as $day) {
+            $tempMin = null;
+            $tempMax = null;
+
+            if ($day->temperatureMin) {
+                $tempMin = $request->getUnits() === 'si' ? $day->temperatureMin : $this->celsiusToFahrenheit($day->temperatureMin);
+            }
+            if ($day->temperatureMax) {
+                $tempMin = $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMin);
+            }
+
             $data['daily']['data'][] = [
                 'time' => $day->forecastStart ?? null,
                 'icon' => $this->convertIcon($day->conditionCode) ?? self::WEATHER_ICON_NA,
                 'summary' => $day->conditionCode ?? null,
-                'temperatureMin' => $day->temperatureMin ?? null,
-                'temperatureMax' => $day->temperatureMax ?? null,
+                'temperatureMin' => $tempMin,
+                'temperatureMax' => $tempMax,
                 'sunriseTime' => Carbon::parse($day->sunrise),
                 'sunsetTime' => Carbon::parse($day->sunset),
                 'moonPhase' => $this->convertMoonPhase($day->moonPhase),
