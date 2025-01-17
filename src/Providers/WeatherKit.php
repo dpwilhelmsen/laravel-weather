@@ -278,8 +278,8 @@ class WeatherKit extends Provider
         if (isset($response->forecastDaily)) {
             $dailyData = $response->forecastDaily;
             $data['currently'] = array_merge($data['currently'], [
-                'sunriseTime' => Carbon::parse($dailyData->days[0]->sunrise),
-                'sunsetTime' => Carbon::parse($dailyData->days[0]->sunset),
+                'sunriseTime' => Carbon::parse($this->getSunrise($dailyData->days[0])),
+                'sunsetTime' => Carbon::parse($this->getSunset($dailyData->days[0])),
                 'moonPhase' => $this->convertMoonPhase($dailyData->days[0]->moonPhase),
             ]);
 
@@ -287,10 +287,10 @@ class WeatherKit extends Provider
                 $tempMin = null;
                 $tempMax = null;
 
-                if ($day->temperatureMin) {
+                if ($day->temperatureMin or $day->temperatureMin === 0.0) {
                     $tempMin = $request->getUnits() === 'si' ? $day->temperatureMin : $this->celsiusToFahrenheit($day->temperatureMin);
                 }
-                if ($day->temperatureMax) {
+                if ($day->temperatureMax or $day->temperatureMax === 0.0) {
                     $tempMax = $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMax);
                 }
 
@@ -300,8 +300,8 @@ class WeatherKit extends Provider
                     'summary' => $day->conditionCode ?? null,
                     'temperatureMin' => $tempMin,
                     'temperatureMax' => $tempMax,
-                    'sunriseTime' => Carbon::parse($day->sunrise),
-                    'sunsetTime' => Carbon::parse($day->sunset),
+                    'sunriseTime' => Carbon::parse($this->getSunrise($day)),
+                    'sunsetTime' => Carbon::parse($this->getSunset($day)),
                     'moonPhase' => $this->convertMoonPhase($day->moonPhase),
                     'precipIntensity' => $day->precipitationAmount,
                     'precipProbability' => $day->precipitationChance,
@@ -328,8 +328,8 @@ class WeatherKit extends Provider
                 'time' => Carbon::parse($weatherData->days[0]->forecastStart),
                 'summary' => $weatherData->days[0]->conditionCode,
                 'icon' => $this->convertIcon($weatherData->days[0]->conditionCode),
-                'sunriseTime' => Carbon::parse($weatherData->days[0]->sunrise),
-                'sunsetTime' => Carbon::parse($weatherData->days[0]->sunset),
+                'sunriseTime' => Carbon::parse($this->getSunrise($weatherData->days[0])),
+                'sunsetTime' => Carbon::parse($this->getSunset($weatherData->days[0])),
                 'moonPhase' => $this->convertMoonPhase($weatherData->days[0]->moonPhase),
                 'precipIntensity' => $weatherData->days[0]->precipitationAmount,
                 'precipProbability' => $weatherData->days[0]->precipitationChance,
@@ -357,10 +357,10 @@ class WeatherKit extends Provider
             $tempMin = null;
             $tempMax = null;
 
-            if ($day->temperatureMin) {
+            if ($day->temperatureMin or $day->temperatureMin === 0.0) {
                 $tempMin = $request->getUnits() === 'si' ? $day->temperatureMin : $this->celsiusToFahrenheit($day->temperatureMin);
             }
-            if ($day->temperatureMax) {
+            if ($day->temperatureMax or $day->temperatureMax === 0.0) {
                 $tempMin = $request->getUnits() === 'si' ? $day->temperatureMax : $this->celsiusToFahrenheit($day->temperatureMin);
             }
 
@@ -370,8 +370,8 @@ class WeatherKit extends Provider
                 'summary' => $day->conditionCode ?? null,
                 'temperatureMin' => $tempMin,
                 'temperatureMax' => $tempMax,
-                'sunriseTime' => Carbon::parse($day->sunrise),
-                'sunsetTime' => Carbon::parse($day->sunset),
+                'sunriseTime' => Carbon::parse($this->getSunrise($day)),
+                'sunsetTime' => Carbon::parse($this->getSunset($day)),
                 'moonPhase' => $this->convertMoonPhase($day->moonPhase),
                 'precipIntensity' => $day->precipitationAmount,
                 'precipProbability' => $day->precipitationChance,
@@ -385,5 +385,19 @@ class WeatherKit extends Provider
         }
 
         return $data;
+    }
+
+    private function getSunrise($data) {
+        if (!isset($data->sunrise)) {
+            return $data->sunriseCivil;
+        }
+        return $data->sunrise;
+    }
+
+    private function getSunset($data) {
+        if (!isset($data->sunset)) {
+            return $data->sunsetCivil;
+        }
+        return $data->sunset;
     }
 }
