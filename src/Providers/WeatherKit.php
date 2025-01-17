@@ -283,6 +283,8 @@ class WeatherKit extends Provider
                 'uvIndex' => $weatherData->days[0]->maxUvIndex,
                 'visibility' => 0,
                 'ozone' => 0,
+                'sunriseTime' => isset($weatherData->days[0]->sunrise) ? $weatherData->days[0]->sunrise : null,
+                'sunsetTime' => isset($weatherData->days[0]->sunset) ? $weatherData->days[0]->sunset : null,
             ],
             'offset' => 0,
             'daily' => [
@@ -298,6 +300,8 @@ class WeatherKit extends Provider
                 'summary' => $day->conditionCode ?? null,
                 'temperatureMin' => $day->temperatureMin ?? null,
                 'temperatureMax' => $day->temperatureMax ?? null,
+                'sunriseTime' => $day->sunrise ?? null,
+                'sunsetTime' => $day->sunset ?? null,
             ];
         }
 
